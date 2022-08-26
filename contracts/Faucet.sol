@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.0;
 
 contract Faucet {
   address payable public owner;
@@ -7,8 +7,8 @@ contract Faucet {
   constructor() payable {
     owner = payable(msg.sender);
   }
-
-  event FallbackCalled(address);
+  // instantiate event
+  event FallbackCalled(address indexed);
 
   function withdraw(uint _amount) payable public {
     // users can only withdraw .1 eth at a time
