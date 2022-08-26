@@ -1,10 +1,11 @@
 const { expect, assert } = require("chai");
+const { BigNumber } = require("ethers");
 const { ethers: { utils }, ethers } = require("hardhat");
 
 describe("Faucet", function () {
   let faucet, signerAddress, signer;
 
-  before("deploy the contract instance first",async () => {
+  beforeEach("deploy the contract instance first",async () => {
     const Faucet = await ethers.getContractFactory("Faucet");
     // deploy contract with 10 eth overriding the default tx data to contain msg.value("value" in JS)
     faucet = await Faucet.deploy({
@@ -24,10 +25,54 @@ describe("Faucet", function () {
   });
 
   describe("withdraw function", () => {
-    it("should withdraw the correct amount", async () => {
+    it("should revert withdraw for incorrect amount", async () => {
       let withdrawAmount = ethers.utils.parseUnits("1", "ether");
       await expect(faucet.withdraw(withdrawAmount)).to.be.reverted;
     })
+
+    it("should be able to withdraw correct amount", async () => {
+      let withdrawAmount = ethers.utils.parseUnits(".1", "ether");
+      await expect(faucet.withdraw(withdrawAmount)).not.to.be.reverted;
+    })
+  });
+
+  describe("withdrawAll function", () => {
+    it("will revert if non owner address calls it", async () => {
+      const newSigner = ethers.provider.getSigner(1);
+      // contract needs to connect to another address to make the call
+      await expect(faucet.connect(newSigner).withdrawAll()).to.be.reverted;
+    });
+
+    it("will revert if non owner address calls it", async () => {
+      await expect(faucet.withdrawAll()).not.to.be.reverted;
+    });
+
+    it("will be able to make the call from original address", async () => {
+      const tenEth = utils.parseUnits("10", "ether");
+      const negTenEth = BigNumber.from(`-${tenEth}`);
+      // check the change of balance after the transaction, withdraw all balance from contract to owner address
+      await expect(await faucet.withdrawAll()).to.changeEtherBalances([faucet, signer], [negTenEth,tenEth]);
+    });
+  });
+
+  describe.only("destroyFaucet function", () => {
+    it("should only be called by owner of address", async () => {
+      await expect(faucet.destroyFaucet()).not.to.be.reverted;
+    });
+
+    it("should not be called by non owner of address", async () => {
+      const newSigner = ethers.provider.getSigner(1);
+      await expect(faucet.connect(newSigner).destroyFaucet()).to.be.reverted;
+    });
+
+    it("should delete the code when owner calls the the fx", async () => {
+      const nullContract = "0x";
+      expect(await ethers.provider.getCode(faucet.address)).not.to.equal(nullContract);
+
+      await faucet.destroyFaucet();
+
+      expect(await ethers.provider.getCode(faucet.address)).to.equal(nullContract);
+    });
   });
 
   describe("fallback function", () => {
