@@ -55,7 +55,7 @@ describe("Faucet", function () {
     });
   });
 
-  describe.only("destroyFaucet function", () => {
+  describe("destroyFaucet function", () => {
     it("should only be called by owner of address", async () => {
       await expect(faucet.destroyFaucet()).not.to.be.reverted;
     });
